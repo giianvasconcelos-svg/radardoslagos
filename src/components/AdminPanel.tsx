@@ -45,7 +45,10 @@ export default function AdminPanel({
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setLogado(Boolean(data.session)));
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => setLogado(Boolean(session)));
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      setLogado(Boolean(session));
+      if (event === "PASSWORD_RECOVERY") setDefinindoSenha(true);
+    });
     return () => data.subscription.unsubscribe();
   }, []);
 

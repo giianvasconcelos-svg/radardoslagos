@@ -12,7 +12,10 @@ export default function App() {
   const [categoriaAtiva, setCategoriaAtiva] = useState("Todas");
   const [termoBusca, setTermoBusca] = useState("");
   const [modoAdmin, setModoAdmin] = useState(
-    () => new URLSearchParams(window.location.search).has("admin") || window.location.hash.includes("type=invite"),
+    () =>
+      new URLSearchParams(window.location.search).has("admin") ||
+      window.location.hash.includes("type=invite") ||
+      window.location.hash.includes("type=recovery"),
   );
   const [noticias, setNoticias] = useState<Noticia[]>(noticiasIniciais);
 
