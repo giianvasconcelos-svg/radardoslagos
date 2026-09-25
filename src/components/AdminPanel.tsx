@@ -65,8 +65,13 @@ export default function AdminPanel({
   const handleDefinirSenha = async (e: React.FormEvent) => {
     e.preventDefault();
     setErroLogin("");
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      setErroLogin("O link expirou ou não abriu a sessão. Solicite um novo e-mail e abra o link mais recente.");
+      return;
+    }
     const { error } = await supabase.auth.updateUser({ password: senha });
-    if (error) return setErroLogin("Não foi possível criar a senha. Use pelo menos 8 caracteres.");
+    if (error) return setErroLogin(`Não foi possível criar a senha: ${error.message}`);
     setDefinindoSenha(false);
     window.history.replaceState({}, "", `${window.location.pathname}?admin=1`);
   };
@@ -149,7 +154,7 @@ export default function AdminPanel({
   };
 
   // Tela de login
-  if (!logado) {
+  if (!logado || definindoSenha) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-cyan-800 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
@@ -193,6 +198,7 @@ export default function AdminPanel({
                 type="password"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
+                minLength={8}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                 placeholder={definindoSenha ? "Crie uma senha segura" : "Digite sua senha"}
                 required
