@@ -21,7 +21,7 @@ export default function App() {
 
   useEffect(() => {
     supabase.from("noticias")
-      .select("id,titulo,resumo,conteudo,categoria,data,imagem,autor,destaque")
+      .select("id,titulo,resumo,conteudo,categoria,data,imagem,autor,destaque,fonte_nome,fonte_url")
       .order("data", { ascending: false })
       .then(({ data, error }) => {
         if (!error && data && data.length > 0) setNoticias(data as Noticia[]);
@@ -88,6 +88,7 @@ export default function App() {
       <AdminPanel
         noticias={noticias}
         onSalvarNoticias={handleSalvarNoticias}
+        onNoticiaAprovada={(noticia) => setNoticias((atuais) => [noticia, ...atuais])}
         onVoltar={() => setModoAdmin(false)}
       />
     );

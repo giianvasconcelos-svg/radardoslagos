@@ -5,12 +5,27 @@ import { supabase } from "../lib/supabase";
 interface AdminPanelProps {
   noticias: Noticia[];
   onSalvarNoticias: (noticias: Noticia[]) => void;
+  onNoticiaAprovada: (noticia: Noticia) => void;
   onVoltar: () => void;
+}
+
+interface NoticiaPendente {
+  id: number;
+  titulo: string;
+  resumo: string;
+  conteudo: string;
+  categoria: string;
+  data: string;
+  imagem: string | null;
+  autor: string;
+  fonte_nome: string;
+  fonte_url: string;
 }
 
 export default function AdminPanel({
   noticias,
   onSalvarNoticias,
+  onNoticiaAprovada,
   onVoltar,
 }: AdminPanelProps) {
   const [logado, setLogado] = useState(false);
@@ -23,6 +38,9 @@ export default function AdminPanel({
 
   const [editando, setEditando] = useState<Noticia | null>(null);
   const [mostrandoForm, setMostrandoForm] = useState(false);
+  const [pendentes, setPendentes] = useState<NoticiaPendente[]>([]);
+  const [carregandoFontes, setCarregandoFontes] = useState(false);
+  const [mensagemFontes, setMensagemFontes] = useState("");
 
   // Form state
   const [titulo, setTitulo] = useState("");
@@ -34,6 +52,7 @@ export default function AdminPanel({
   const [destaque, setDestaque] = useState(false);
 
   const categorias = [
+    "Região",
     "Política",
     "Economia",
     "Turismo",
@@ -51,6 +70,66 @@ export default function AdminPanel({
     });
     return () => data.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!logado) return;
+    supabase
+      .from("noticias_pendentes")
+      .select("id,titulo,resumo,conteudo,categoria,data,imagem,autor,fonte_nome,fonte_url")
+      .eq("status", "pendente")
+      .order("data", { ascending: false })
+      .then(({ data }) => setPendentes((data as NoticiaPendente[]) || []));
+  }, [logado]);
+
+  const buscarFontes = async () => {
+    setCarregandoFontes(true);
+    setMensagemFontes("");
+    const { data, error } = await supabase.functions.invoke("coletar-noticias");
+    if (error) {
+      setMensagemFontes("Não foi possível consultar as fontes agora.");
+    } else {
+      const { data: atualizadas } = await supabase
+        .from("noticias_pendentes")
+        .select("id,titulo,resumo,conteudo,categoria,data,imagem,autor,fonte_nome,fonte_url")
+        .eq("status", "pendente")
+        .order("data", { ascending: false });
+      setPendentes((atualizadas as NoticiaPendente[]) || []);
+      setMensagemFontes(`${data?.adicionadas || 0} nova(s) sugestão(ões) encontrada(s).`);
+    }
+    setCarregandoFontes(false);
+  };
+
+  const aprovarPendente = async (pendente: NoticiaPendente) => {
+    const { data, error } = await supabase
+      .from("noticias")
+      .insert({
+        titulo: pendente.titulo,
+        resumo: pendente.resumo,
+        conteudo: pendente.conteudo,
+        categoria: pendente.categoria,
+        data: pendente.data,
+        imagem: pendente.imagem || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=500&fit=crop",
+        autor: pendente.autor,
+        destaque: false,
+        fonte_nome: pendente.fonte_nome,
+        fonte_url: pendente.fonte_url,
+      })
+      .select("id,titulo,resumo,conteudo,categoria,data,imagem,autor,destaque,fonte_nome,fonte_url")
+      .single();
+    if (error || !data) return alert("Não foi possível publicar esta sugestão.");
+    await supabase.from("noticias_pendentes").update({ status: "publicada" }).eq("id", pendente.id);
+    setPendentes((atuais) => atuais.filter((item) => item.id !== pendente.id));
+    onNoticiaAprovada(data as Noticia);
+  };
+
+  const descartarPendente = async (id: number) => {
+    const { error } = await supabase
+      .from("noticias_pendentes")
+      .update({ status: "descartada" })
+      .eq("id", id);
+    if (error) return alert("Não foi possível descartar esta sugestão.");
+    setPendentes((atuais) => atuais.filter((item) => item.id !== id));
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -273,6 +352,65 @@ export default function AdminPanel({
       </header>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
+        <section className="bg-white rounded-xl shadow-md border border-gray-200 p-6 mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+            <div>
+              <h2 className="text-xl font-bold text-gray-800">Sugestões das fontes</h2>
+              <p className="text-sm text-gray-500">Nada é publicado sem a sua aprovação.</p>
+            </div>
+            <button
+              type="button"
+              onClick={buscarFontes}
+              disabled={carregandoFontes}
+              className="bg-blue-700 hover:bg-blue-800 disabled:bg-blue-300 text-white font-bold px-5 py-2.5 rounded-lg transition-colors"
+            >
+              {carregandoFontes ? "Consultando..." : "Buscar notícias agora"}
+            </button>
+          </div>
+          {mensagemFontes && <p className="text-sm text-blue-700 mb-4">{mensagemFontes}</p>}
+          {pendentes.length === 0 ? (
+            <p className="text-sm text-gray-500 bg-gray-50 rounded-lg p-4">Nenhuma sugestão aguardando revisão.</p>
+          ) : (
+            <div className="space-y-3">
+              {pendentes.map((pendente) => (
+                <article key={pendente.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex flex-col md:flex-row gap-4 justify-between">
+                    <div>
+                      <p className="text-xs font-semibold text-blue-700 mb-1">{pendente.fonte_nome}</p>
+                      <h3 className="font-bold text-gray-800">{pendente.titulo}</h3>
+                      <p className="text-sm text-gray-600 mt-1">{pendente.resumo}</p>
+                      <a
+                        href={pendente.fonte_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block text-xs text-blue-700 mt-2 hover:underline"
+                      >
+                        Conferir matéria original ↗
+                      </a>
+                    </div>
+                    <div className="flex gap-2 shrink-0 md:self-center">
+                      <button
+                        type="button"
+                        onClick={() => aprovarPendente(pendente)}
+                        className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg"
+                      >
+                        Aprovar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => descartarPendente(pendente.id)}
+                        className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-lg"
+                      >
+                        Descartar
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-200">

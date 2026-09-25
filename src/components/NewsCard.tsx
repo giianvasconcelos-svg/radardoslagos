@@ -40,6 +40,16 @@ export default function NewsCard({ noticia }: NewsCardProps) {
             })}
           </time>
         </div>
+        {noticia.fonte_url && (
+          <a
+            href={noticia.fonte_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex text-xs font-semibold text-blue-700 hover:text-blue-900"
+          >
+            Fonte: {noticia.fonte_nome || "Matéria original"} ↗
+          </a>
+        )}
       </div>
     </article>
   );

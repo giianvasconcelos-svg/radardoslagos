@@ -8,10 +8,13 @@ export interface Noticia {
   imagem: string;
   destaque: boolean;
   autor: string;
+  fonte_nome?: string;
+  fonte_url?: string;
 }
 
 export const categorias = [
   "Todas",
+  "Região",
   "Política",
   "Economia",
   "Turismo",
