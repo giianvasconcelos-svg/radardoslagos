@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Noticia } from "../data/noticias";
+import { supabase } from "../lib/supabase";
 
 interface AdminPanelProps {
   noticias: Noticia[];
@@ -16,6 +17,9 @@ export default function AdminPanel({
   const [usuario, setUsuario] = useState("");
   const [senha, setSenha] = useState("");
   const [erroLogin, setErroLogin] = useState("");
+  const [definindoSenha, setDefinindoSenha] = useState(() =>
+    window.location.hash.includes("type=invite") || window.location.hash.includes("type=recovery"),
+  );
 
   const [editando, setEditando] = useState<Noticia | null>(null);
   const [mostrandoForm, setMostrandoForm] = useState(false);
@@ -39,21 +43,32 @@ export default function AdminPanel({
     "Segurança",
   ];
 
-  // Login simples (admin/admin123)
-  const handleLogin = (e: React.FormEvent) => {
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setLogado(Boolean(data.session)));
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => setLogado(Boolean(session)));
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (usuario === "admin" && senha === "admin123") {
-      setLogado(true);
-      setErroLogin("");
-    } else {
-      setErroLogin("Usuário ou senha incorretos");
-    }
+    setErroLogin("");
+    const { error } = await supabase.auth.signInWithPassword({ email: usuario, password: senha });
+    if (error) setErroLogin("E-mail ou senha incorretos");
   };
 
-  const handleLogout = () => {
-    setLogado(false);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setUsuario("");
     setSenha("");
+  };
+
+  const handleDefinirSenha = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErroLogin("");
+    const { error } = await supabase.auth.updateUser({ password: senha });
+    if (error) return setErroLogin("Não foi possível criar a senha. Use pelo menos 8 caracteres.");
+    setDefinindoSenha(false);
+    window.history.replaceState({}, "", `${window.location.pathname}?admin=1`);
   };
 
   const limparForm = () => {
@@ -148,20 +163,27 @@ export default function AdminPanel({
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={definindoSenha ? handleDefinirSenha : handleLogin} className="space-y-4">
+            {definindoSenha && (
+              <p className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                Crie sua senha de administrador para concluir o acesso.
+              </p>
+            )}
+            {!definindoSenha && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Usuário
+                E-mail
               </label>
               <input
                 type="text"
                 value={usuario}
                 onChange={(e) => setUsuario(e.target.value)}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                placeholder="Digite seu usuário"
+                placeholder="seu@email.com"
                 required
               />
             </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -172,7 +194,7 @@ export default function AdminPanel({
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                placeholder="Digite sua senha"
+                placeholder={definindoSenha ? "Crie uma senha segura" : "Digite sua senha"}
                 required
               />
             </div>
@@ -187,7 +209,7 @@ export default function AdminPanel({
               type="submit"
               className="w-full bg-gradient-to-r from-blue-700 to-cyan-600 hover:from-blue-800 hover:to-cyan-700 text-white font-bold py-3 rounded-lg shadow-lg transition-all"
             >
-              Entrar
+              {definindoSenha ? "Criar senha" : "Entrar"}
             </button>
 
             <div className="text-center">
@@ -200,10 +222,6 @@ export default function AdminPanel({
               </button>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
-              <strong>Demo:</strong> usuário: <code>admin</code> | senha:{" "}
-              <code>admin123</code>
-            </div>
           </form>
         </div>
       </div>

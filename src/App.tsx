@@ -6,39 +6,24 @@ import Sidebar from "./components/Sidebar";
 import Footer from "./components/Footer";
 import AdminPanel from "./components/AdminPanel";
 import { noticias as noticiasIniciais, categorias, Noticia } from "./data/noticias";
-
-const STORAGE_KEY = "radar_dos_lagos_noticias";
-
-function carregarNoticias(): Noticia[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (e) {
-    console.error("Erro ao carregar notícias do localStorage:", e);
-  }
-  return noticiasIniciais;
-}
-
-function salvarNoticiasStorage(noticias: Noticia[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(noticias));
-  } catch (e) {
-    console.error("Erro ao salvar notícias no localStorage:", e);
-  }
-}
+import { supabase } from "./lib/supabase";
 
 export default function App() {
   const [categoriaAtiva, setCategoriaAtiva] = useState("Todas");
   const [termoBusca, setTermoBusca] = useState("");
-  const [modoAdmin, setModoAdmin] = useState(false);
-  const [noticias, setNoticias] = useState<Noticia[]>(carregarNoticias);
+  const [modoAdmin, setModoAdmin] = useState(
+    () => new URLSearchParams(window.location.search).has("admin") || window.location.hash.includes("type=invite"),
+  );
+  const [noticias, setNoticias] = useState<Noticia[]>(noticiasIniciais);
 
-  // Persistir mudanças
   useEffect(() => {
-    salvarNoticiasStorage(noticias);
-  }, [noticias]);
+    supabase.from("noticias")
+      .select("id,titulo,resumo,conteudo,categoria,data,imagem,autor,destaque")
+      .order("data", { ascending: false })
+      .then(({ data, error }) => {
+        if (!error && data && data.length > 0) setNoticias(data as Noticia[]);
+      });
+  }, []);
 
   // Normaliza texto para busca (sem acentos e em minúsculas)
   const normalizar = (texto: string) =>
@@ -86,8 +71,12 @@ export default function App() {
     }
   };
 
-  const handleSalvarNoticias = (novasNoticias: Noticia[]) => {
+  const handleSalvarNoticias = async (novasNoticias: Noticia[]) => {
     setNoticias(novasNoticias);
+    const { error: deleteError } = await supabase.from("noticias").delete().neq("id", 0);
+    if (deleteError) return alert("Não foi possível salvar as notícias.");
+    const { error } = await supabase.from("noticias").insert(novasNoticias);
+    if (error) alert("Não foi possível salvar as notícias.");
   };
 
   // Se estiver no modo admin, renderiza o painel admin

@@ -15,7 +15,7 @@ Portal de notícias completo da Região dos Lagos do Rio de Janeiro, com painel 
 - ✅ Filtros por categoria
 
 ### Painel Administrativo
-- ✅ Login seguro (usuário: `admin` | senha: `admin123`)
+- ✅ Login seguro por e-mail e senha com Supabase Auth
 - ✅ Dashboard com estatísticas
 - ✅ Criar novas notícias
 - ✅ Editar notícias existentes
@@ -27,9 +27,7 @@ Portal de notícias completo da Região dos Lagos do Rio de Janeiro, com painel 
 ## 🔐 Acesso ao Painel Admin
 
 1. Clique no botão **"🔐 Admin"** no cabeçalho do site (desktop ou mobile)
-2. Faça login com:
-   - **Usuário:** `admin`
-   - **Senha:** `admin123`
+2. Faça login com o e-mail administrador cadastrado no Supabase
 3. Você será redirecionado para o painel administrativo
 
 ## 📝 Como Adicionar Notícias
@@ -130,16 +128,9 @@ O site é totalmente responsivo e funciona em:
 
 ## 🎨 Personalização
 
-### Mudar Credenciais do Admin
+### Credenciais do Admin
 
-Edite o arquivo `src/components/AdminPanel.tsx`:
-
-```typescript
-// Linha ~60
-if (usuario === "admin" && senha === "admin123") {
-```
-
-Altere para suas credenciais desejadas.
+O acesso é gerenciado pelo Supabase Auth e protegido por Row Level Security.
 
 ### Mudar Notícias Iniciais
 
