@@ -6,6 +6,7 @@ interface HeaderProps {
   categorias: string[];
   termoBusca: string;
   onBuscaChange: (termo: string) => void;
+  onAdminClick?: () => void;
 }
 
 export default function Header({
@@ -14,6 +15,7 @@ export default function Header({
   categorias,
   termoBusca,
   onBuscaChange,
+  onAdminClick,
 }: HeaderProps) {
   const [menuAberto, setMenuAberto] = useState(false);
   const [buscaAberta, setBuscaAberta] = useState(false);
@@ -92,6 +94,16 @@ export default function Header({
               🔍
             </button>
           </form>
+
+          {/* Admin button - desktop */}
+          {onAdminClick && (
+            <button
+              onClick={onAdminClick}
+              className="hidden md:flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium px-4 py-2 rounded-full border border-white/20 transition-colors"
+            >
+              🔐 Admin
+            </button>
+          )}
 
           {/* Mobile search toggle */}
           <button
@@ -189,6 +201,17 @@ export default function Header({
                   {cat}
                 </button>
               ))}
+              {onAdminClick && (
+                <button
+                  onClick={() => {
+                    onAdminClick();
+                    setMenuAberto(false);
+                  }}
+                  className="px-3 py-1.5 rounded-full text-sm font-medium bg-red-500/80 hover:bg-red-500 text-white transition-all ml-auto"
+                >
+                  🔐 Admin
+                </button>
+              )}
             </div>
           )}
         </div>

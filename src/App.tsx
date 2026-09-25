@@ -1,14 +1,44 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Header from "./components/Header";
 import HeroNews from "./components/HeroNews";
 import NewsCard from "./components/NewsCard";
 import Sidebar from "./components/Sidebar";
 import Footer from "./components/Footer";
-import { noticias, categorias } from "./data/noticias";
+import AdminPanel from "./components/AdminPanel";
+import { noticias as noticiasIniciais, categorias, Noticia } from "./data/noticias";
+
+const STORAGE_KEY = "radar_dos_lagos_noticias";
+
+function carregarNoticias(): Noticia[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.error("Erro ao carregar notícias do localStorage:", e);
+  }
+  return noticiasIniciais;
+}
+
+function salvarNoticiasStorage(noticias: Noticia[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(noticias));
+  } catch (e) {
+    console.error("Erro ao salvar notícias no localStorage:", e);
+  }
+}
 
 export default function App() {
   const [categoriaAtiva, setCategoriaAtiva] = useState("Todas");
   const [termoBusca, setTermoBusca] = useState("");
+  const [modoAdmin, setModoAdmin] = useState(false);
+  const [noticias, setNoticias] = useState<Noticia[]>(carregarNoticias);
+
+  // Persistir mudanças
+  useEffect(() => {
+    salvarNoticiasStorage(noticias);
+  }, [noticias]);
 
   // Normaliza texto para busca (sem acentos e em minúsculas)
   const normalizar = (texto: string) =>
@@ -33,7 +63,7 @@ export default function App() {
       );
       return camposBusca.includes(termoNormalizado);
     });
-  }, [categoriaAtiva, termoNormalizado]);
+  }, [noticias, categoriaAtiva, termoNormalizado]);
 
   const noticiasDestaque = noticiasFiltradas.filter((n) => n.destaque);
   const noticiasLista =
@@ -51,11 +81,25 @@ export default function App() {
 
   const handleBuscaChange = (termo: string) => {
     setTermoBusca(termo);
-    // Se estiver buscando, volta para "Todas" para mostrar resultados de todas as categorias
     if (termo && categoriaAtiva !== "Todas") {
       setCategoriaAtiva("Todas");
     }
   };
+
+  const handleSalvarNoticias = (novasNoticias: Noticia[]) => {
+    setNoticias(novasNoticias);
+  };
+
+  // Se estiver no modo admin, renderiza o painel admin
+  if (modoAdmin) {
+    return (
+      <AdminPanel
+        noticias={noticias}
+        onSalvarNoticias={handleSalvarNoticias}
+        onVoltar={() => setModoAdmin(false)}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -65,6 +109,7 @@ export default function App() {
         categorias={categorias}
         termoBusca={termoBusca}
         onBuscaChange={handleBuscaChange}
+        onAdminClick={() => setModoAdmin(true)}
       />
 
       {/* Hero Section - só mostra quando não há busca */}
