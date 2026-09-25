@@ -1,4 +1,5 @@
 import { Noticia } from "../data/noticias";
+import { fontesNoticias } from "../data/fontes";
 
 interface SidebarProps {
   noticias: Noticia[];
@@ -35,6 +36,37 @@ export default function Sidebar({ noticias }: SidebarProps) {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Fontes externas */}
+      <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-slate-800 to-blue-800 px-5 py-3">
+          <h3 className="text-white font-bold text-lg flex items-center gap-2">
+            🗞️ Fontes da Região
+          </h3>
+        </div>
+        <div className="p-4">
+          <p className="text-xs text-gray-500 mb-3">
+            Consulte também outros veículos que cobrem a Região dos Lagos.
+          </p>
+          <ul className="space-y-1">
+            {fontesNoticias.map((fonte) => (
+              <li key={fonte.url}>
+                <a
+                  href={fonte.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                >
+                  <span>{fonte.nome}</span>
+                  <span aria-hidden="true" className="text-gray-400">
+                    ↗
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
 
